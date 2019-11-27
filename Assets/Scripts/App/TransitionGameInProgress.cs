@@ -16,9 +16,8 @@ namespace App
 		public bool Execute(Repository repository)
 		{
 			_strategy.UpdateModel(repository);
-			_screen.Set(repository);
-
-			return _strategy.CheckComplete(repository);
+			_screen.Render(repository);
+			return _strategy.Status != GameStatus.InProgress;
 		}
 
 		public void Release()

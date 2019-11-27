@@ -1,5 +1,4 @@
 ﻿using Model;
-using UnityEngine;
 
 namespace App
 {
@@ -16,9 +15,6 @@ namespace App
 		{
 			repository.GenerateMeta();
 			repository.GenerateMatch();
-
-			Debug.Log("menu done");
-
 			return true;
 		}
 

@@ -35,7 +35,7 @@ public sealed class ControllerApp : MonoBehaviour
 		_indexTransition %= _fsm.Length;
 	}
 
-	private void OnDisable()
+	private void OnDestroy()
 	{
 		for(var index = 0; index < _fsm.Length; index++)
 		{
