@@ -1,111 +1,34 @@
 ﻿using System;
+using App;
+using Model.Data;
 using UnityEngine;
 
-namespace Model
+namespace Model.Rules
 {
-	// provider - the same
-	public interface IContext
-	{
-		T Resolve<T>() where T : class;
-	}
-
-	public interface IReflectorDriver
-	{
-		void UpdateReflector(Repository repository, ModelReflector reflector);
-	}
-
-	public interface IStrategyGame
-	{
-		GameStatus Status { get; }
-		void UpdateModel(Repository repository);
-	}
-
-	public interface IInputProvider
-	{
-		bool IsInputLeft();
-		bool IsInputRight();
-	}
-
-	public class InputProviderLocalForLocal : IInputProvider
-	{
-		public bool IsInputLeft()
-		{
-			return ExtensionInput.IsLocalLeft();
-		}
-
-		public bool IsInputRight()
-		{
-			return ExtensionInput.IsLocalRight();
-		}
-	}
-
-	public class InputProviderLocalForRemote : IInputProvider
-	{
-		public bool IsInputLeft()
-		{
-			return ExtensionInput.IsRemoteLeft();
-		}
-
-		public bool IsInputRight()
-		{
-			return ExtensionInput.IsRemoteRight();
-		}
-	}
-
-	public class ReflectorDriverInput : IReflectorDriver
-	{
-		private readonly IInputProvider _inputProvider;
-
-		public ReflectorDriverInput(IInputProvider inputProvider)
-		{
-			_inputProvider = inputProvider;
-		}
-
-		public void UpdateReflector(Repository repository, ModelReflector reflector)
-		{
-			if(_inputProvider.IsInputLeft())
-			{
-				reflector.Position += Vector2.left * repository.DataTime.SimStep;
-			}
-
-			if(_inputProvider.IsInputRight())
-			{
-				reflector.Position += Vector2.right * repository.DataTime.SimStep;
-			}
-
-			// if the network driver - strategy can't limit reflector
-			//? if the local driver - strategy could limit, but that's not generic
-			repository.Limit(reflector);
-		}
-	}
-
-	public enum GameStatus
-	{
-		InProgress,
-		WinRemote,
-		WinLocal,
-	}
-
 	public class StrategyDefault : IStrategyGame
 	{
 		// TODO: logger might be overriden also
 
-		private readonly IReflectorDriver _driverRemote = new ReflectorDriverInput(new InputProviderLocalForRemote());
-		private readonly IReflectorDriver _driverLocal = new ReflectorDriverInput(new InputProviderLocalForLocal());
+		private readonly IContext _context;
 
-		public GameStatus Status { get; private set; }
+		public StatusMatch Status { get; private set; }
+
+		public StrategyDefault(IContext context)
+		{
+			_context = context;
+		}
 
 		// IStrategyGame
 		public void UpdateModel(Repository repository)
 		{
-			Status = GameStatus.InProgress;
+			Status = StatusMatch.InProgress;
 
 			//? all the test should perform by stationary frame
 			//? should update bought prior testing
 
 			// reflectors
-			_driverRemote.UpdateReflector(repository, repository.DataReflectorRemote);
-			_driverLocal.UpdateReflector(repository, repository.DataReflectorLocal);
+			_context.Resolve<IReflectorDriverRemote>().UpdateReflector(repository, repository.DataReflectorRemote);
+			_context.Resolve<IReflectorDriverLocal>().UpdateReflector(repository, repository.DataReflectorLocal);
 
 			// ball
 			unsafe
@@ -183,7 +106,10 @@ namespace Model
 						//! wrong in out of court - use if below reflector
 						Debug.Log("bounce GOAL REMOTE");
 
-						Status = GameStatus.WinRemote;
+						Status = StatusMatch.WinLocal;
+
+						repository.ScoreInc();
+
 						return;
 					}
 				}
@@ -196,7 +122,7 @@ namespace Model
 						//! wrong in out of court - use if below reflector
 						Debug.Log("bounce GOAL LOCAL");
 
-						Status = GameStatus.WinLocal;
+						Status = StatusMatch.WinRemote;
 						return;
 					}
 				}

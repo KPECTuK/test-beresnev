@@ -56,6 +56,8 @@ TestResult.xml
 # Unity3D
 **/[Ee]xternals/
 **/[Ee]xternals.meta
+**/Assets/Assemblies/
+**/Assets/Assemblies.meta
 [Bb]in.meta
 [Oo]bj.meta
 *.csproj

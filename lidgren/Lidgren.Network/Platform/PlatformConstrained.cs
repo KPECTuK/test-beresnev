@@ -1,4 +1,6 @@
-﻿#if __CONSTRAINED__ || UNITY_STANDALONE_LINUX || UNITY
+﻿
+using System.Net.Sockets;
+#if __CONSTRAINED__ || UNITY_STANDALONE_LINUX || UNITY
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -30,11 +32,14 @@ namespace Lidgren.Network
 #if UNITY_ANDROID || UNITY_STANDALONE_OSX || UNITY_STANDALONE_WIN || UNITY_STANDALONE_LINUX || UNITY_IOS || UNITY
 			try
 			{
-				if (!(UnityEngine.Application.internetReachability == UnityEngine.NetworkReachability.NotReachable))
+				string localIp;
+				using(var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
 				{
-					return null;
+					socket.Connect("8.8.8.8", 65530);
+					var endPoint = socket.LocalEndPoint as IPEndPoint;
+					localIp = endPoint?.Address.ToString();
 				}
-				return IPAddress.Parse(UnityEngine.Network.player.externalIP);
+				return ReferenceEquals(null, localIp) ? null : IPAddress.Parse(localIp);
 			}
 			catch // Catch Access Denied errors
 			{

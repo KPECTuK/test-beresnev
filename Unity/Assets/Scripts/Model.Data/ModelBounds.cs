@@ -1,8 +1,8 @@
-﻿namespace Model
+﻿namespace Model.Data
 {
-	public struct Bounds
+	public struct ModelBounds
 	{
-		public Bounds(float left, float right, float down, float up)
+		public ModelBounds(float left, float right, float down, float up)
 		{
 			Left = left;
 			Right = right;

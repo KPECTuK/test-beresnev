@@ -1,5 +1,6 @@
 ﻿using System;
-using Model;
+using Model.Data;
+using Model.Rules;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,6 +17,8 @@ public class ControllerScreenGame : ControllerScreen
 
 	private new void Awake()
 	{
+		base.Awake();
+
 		_ball = transform.Find("ball")?.GetComponent<RectTransform>() ?? throw new Exception("can't find screen BALL");
 		_court = transform.Find("court")?.GetComponent<RectTransform>() ?? throw new Exception("can't find screen COURT");
 		_reflectorRemote = transform.Find("reflector-remote")?.GetComponent<RectTransform>() ?? throw new Exception("can't find screen REFLECTOR REMOTE");
@@ -28,8 +31,6 @@ public class ControllerScreenGame : ControllerScreen
 		_debugRemote?.gameObject.SetActive(false);
 		_debugLocal?.gameObject.SetActive(false);
 		_debugBall?.gameObject.SetActive(false);
-
-		base.Awake();
 	}
 
 	public void Render(Repository repository)
@@ -76,6 +77,7 @@ public class ControllerScreenGame : ControllerScreen
 			new Vector2(
 				width * repository.DataBall.Position.x,
 				height * repository.DataBall.Position.y);
+		_ball.SearchComponent<RawImage>(null).color = repository.DataBall.Color;
 
 		//_debugRemote.text = repository.DataReflectorRemote.Position.ToString("0.000");
 		//_debugLocal.text = repository.DataReflectorLocal.Position.ToString("0.000");

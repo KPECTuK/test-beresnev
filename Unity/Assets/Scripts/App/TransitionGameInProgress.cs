@@ -1,4 +1,5 @@
-﻿using Model;
+﻿using Model.Data;
+using Model.Rules;
 
 namespace App
 {
@@ -17,7 +18,7 @@ namespace App
 		{
 			_strategy.UpdateModel(repository);
 			_screen.Render(repository);
-			return _strategy.Status != GameStatus.InProgress;
+			return _strategy.Status != StatusMatch.InProgress;
 		}
 
 		public void Release()

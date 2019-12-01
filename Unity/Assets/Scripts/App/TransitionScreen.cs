@@ -1,4 +1,4 @@
-﻿using Model;
+﻿using Model.Data;
 
 namespace App
 {

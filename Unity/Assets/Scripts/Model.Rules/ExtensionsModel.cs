@@ -1,22 +1,30 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
+using Model.Data;
+using UnityEditor;
 using UnityEngine;
 
-namespace Model
+namespace Model.Rules
 {
-	public static class ExtensionsData
+	public static class ExtensionsModel
 	{
 		private const float DIM = 1.0f;
 		private const float AXIS_GAP = 0.7f;
 		private const float DEFAULT_SIZE = .1f;
+		private const string KEY_META_F = "meta";
+		private const string APP_ID_S = "pong";
+		private const int SERVER_PORT_I = 64500;
 
 		public static void GenerateMatch(this Repository target)
 		{
 			target.DataBall = new ModelBall
 			{
-				Color = Color.white,
+				Color = target.DataMetaLocal.BallColor,
+				Radius = target.DataMetaLocal.BallRadius,
 				Position = Vector2.zero,
-				Radius = .03f,
 				Speed = UnityEngine.Random.insideUnitCircle.normalized,
 			};
 
@@ -43,24 +51,131 @@ namespace Model
 				RemoteGoal = new[] { new ModelSegment(new Vector2(-1f, halfDistance), new Vector2(1f, halfDistance)) },
 				LocalGoal = new[] { new ModelSegment(new Vector2(-1f, -halfDistance), new Vector2(1f, -halfDistance)) },
 			};
-
-			target.DataTime = new ModelTime();
 		}
 
 		public static void GenerateMeta(this Repository target)
 		{
-			target.DataMetaLocal = new ModelMeta
+			try
 			{
-				DataNameLocal = "local",
-				Scores = new[]
+				var value = PlayerPrefs.GetString(KEY_META_F);
+				if(string.IsNullOrEmpty(value))
 				{
-					new ModelScore
-					{
-						Name = "local",
-						Value = 0,
-					}
+					throw new Exception("not found");
 				}
+				target.DataMetaLocal = JsonUtility.FromJson<ModelMeta>(value);
+
+				Debug.Log("initialized from file");
+			}
+			catch
+			{
+				var nameLocal = $"user-{Mathf.FloorToInt(UnityEngine.Random.value * 1000):000}";
+				target.DataMetaLocal = new ModelMeta
+				{
+					DataNameLocal = nameLocal,
+					BallColor = Color.green,
+					BallRadius = .03f,
+					Scores = new[]
+					{
+						new ModelScore
+						{
+							Name = nameLocal,
+							Value = 0,
+						}
+					}
+				};
+
+				Debug.Log("initialized manually");
+			}
+		}
+
+		public static void GenerateSystem(this Repository target)
+		{
+			target.DataTime = new ModelTime
+			{
+				AbsStartTime = DateTime.UtcNow.Ticks,
 			};
+
+			var gateway = NetworkInterface
+				.GetAllNetworkInterfaces()
+				.Where(_ => _.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 || _.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
+				.SelectMany(_ => _.GetIPProperties().GatewayAddresses)
+				.Where(_ => _.Address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(_.Address))
+				.ToArray();
+
+			Debug.Log($"gateways: {string.Join(", ", gateway.Select(_ => _.Address.ToString()))}");
+
+			var addresses = NetworkInterface
+				.GetAllNetworkInterfaces()
+				.Where(_ => _.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 || _.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
+				.SelectMany(_ => _.GetIPProperties().UnicastAddresses)
+				.Where(_ => _.Address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(_.Address))
+				.ToArray();
+
+			Debug.Log($"addresses: {string.Join(", ", addresses.Select(_ => _.Address.ToString()))}");
+			
+			var address = addresses.First(_ => IsSameNetwork(_, gateway[0]));
+
+			Debug.Log($"found: {address.Address}");
+
+			target.DataNetwork = new ModelNetwork
+			{
+				AppId = APP_ID_S,
+				Selection = -1,
+				PortServer = SERVER_PORT_I,
+				DataConnections = new[]
+				{
+					new ModelConnection
+					{
+						Local = true,
+						DataNameRemote = target.DataMetaLocal.DataNameLocal,
+						DataIpEndPoint = new IPEndPoint(
+							address.Address,
+							SERVER_PORT_I + Mathf.FloorToInt(UnityEngine.Random.value * 1000))
+					},
+				},
+			};
+		}
+
+		private static bool IsSameNetwork(UnicastIPAddressInformation uni, GatewayIPAddressInformation gate)
+		{
+			var mask = uni.IPv4Mask.GetAddressBytes();
+			var uniAddress = uni.Address.GetAddressBytes();
+			var gateAddress = gate.Address.GetAddressBytes();
+			for(var index = 0; index < mask.Length; index++)
+			{
+				if((uniAddress[index] & mask[index]) != (gateAddress[index] & mask[index]))
+				{
+					Debug.Log($"fail: {uniAddress} with: {gateAddress} with mask: {mask}");
+					return false;
+				}
+			}
+			return true;
+		}
+
+		public static void Save(this Repository repository)
+		{
+			// TODO: what if throws
+			PlayerPrefs.SetString(KEY_META_F, JsonUtility.ToJson(repository.DataMetaLocal));
+			PlayerPrefs.Save();
+		}
+
+#if UNITY_EDITOR
+		[MenuItem("Tools/Clear PlayerPrefs")]
+		public static void EditorClearPlayerPrefs()
+		{
+			PlayerPrefs.DeleteKey(KEY_META_F);
+		}
+#endif
+		public static void ScoreInc(this Repository target)
+		{
+			var index = Array.FindIndex(target.DataMetaLocal.Scores, _ => _.Name == target.DataMetaLocal.DataNameLocal);
+			if(index == -1)
+			{
+				index = target.DataMetaLocal.Scores.Length;
+				Array.Resize(ref target.DataMetaLocal.Scores, target.DataMetaLocal.Scores.Length + 1);
+				target.DataMetaLocal.Scores[index].Name = target.DataMetaLocal.DataNameLocal;
+			}
+			target.DataMetaLocal.Scores[index].Value++;
 		}
 
 		public static bool Intersect(ModelSegment s0, ModelSegment s1, out Vector2 result)
