@@ -17,8 +17,8 @@ public sealed class ControllerApp : MonoBehaviour, IContext
 	private Repository _repository;
 	private ServiceNetwork _service;
 
-	private readonly IReflectorDriverLocal _local = new ReflectorDriverInput(new InputProviderLocalForLocal());
-	private readonly IReflectorDriverRemote _remote = new ReflectorDriverInput(new InputProviderLocalForRemote());
+	private readonly IReflectorDriverLocal _local = new ReflectorDriverInputGyro(new InputProviderLocalForLocalGyro());
+	private readonly IReflectorDriverRemote _remote = new ReflectorDriverInputGyro(new InputProviderLocalForRemote());
 
 	private void Awake()
 	{

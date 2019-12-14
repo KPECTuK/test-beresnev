@@ -100,5 +100,26 @@ namespace Service.Input
 				UnityEngine.Input.touchCount > 0 && UnityEngine.Input.GetTouch(0).IsLocalRight() ||
 				UnityEngine.Input.touchCount > 1 && UnityEngine.Input.GetTouch(1).IsLocalRight();
 		}
+
+		public static bool IsGyroLeft()
+		{
+			return Vector3.Dot(GetGravity(), Vector3.down.normalized) > .1f;
+		}
+
+		public static bool IsGyroRight()
+		{
+			return Vector3.Dot(GetGravity(), Vector3.down.normalized) < -.1f;
+		}
+
+		public static Vector3 GetGravity()
+		{
+			return GetGyro() * Vector3.down;
+		}
+
+		public static Quaternion GetGyro()
+		{
+			var q = UnityEngine.Input.gyro.attitude;
+			return new Quaternion(q.x, q.y, -q.z, -q.w);
+		}
 	}
 }

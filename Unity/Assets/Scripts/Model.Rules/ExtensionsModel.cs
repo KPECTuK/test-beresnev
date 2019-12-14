@@ -112,10 +112,10 @@ namespace Model.Rules
 				.ToArray();
 
 			Debug.Log($"addresses: {string.Join(", ", addresses.Select(_ => _.Address.ToString()))}");
-			
-			var address = addresses.First(_ => IsSameNetwork(_, gateway[0]));
 
-			Debug.Log($"found: {address.Address}");
+			var address = addresses.FirstOrDefault(_ => IsSameNetwork(_, gateway.FirstOrDefault()));
+
+			//Debug.Log($"found: {address.Address}");
 
 			target.DataNetwork = new ModelNetwork
 			{
@@ -129,7 +129,7 @@ namespace Model.Rules
 						Local = true,
 						DataNameRemote = target.DataMetaLocal.DataNameLocal,
 						DataIpEndPoint = new IPEndPoint(
-							address.Address,
+							address?.Address ?? new IPAddress(new byte[] { 127, 0, 0, 1 }),
 							SERVER_PORT_I + Mathf.FloorToInt(UnityEngine.Random.value * 1000))
 					},
 				},
@@ -138,6 +138,11 @@ namespace Model.Rules
 
 		private static bool IsSameNetwork(UnicastIPAddressInformation uni, GatewayIPAddressInformation gate)
 		{
+			if(gate is null)
+			{
+				return false;
+			}
+
 			var mask = uni.IPv4Mask.GetAddressBytes();
 			var uniAddress = uni.Address.GetAddressBytes();
 			var gateAddress = gate.Address.GetAddressBytes();
